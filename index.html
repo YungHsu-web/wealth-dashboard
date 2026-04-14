@@ -11,36 +11,45 @@
     <style>
         body { background-color: #f4f4f2; font-family: "Microsoft JhengHei", sans-serif; color: #5b5b5b; }
         .gold-border { border-top: 4px solid #bda391; }
-        .morandi-bg { background-color: #e6e2d6; }
+        .status-dot {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .dot-green { background-color: #9fb8ad; box-shadow: 0 0 5px #9fb8ad; }
+        .dot-yellow { background-color: #e4dece; box-shadow: 0 0 5px #d4c59a; }
+        .dot-red { background-color: #bda391; box-shadow: 0 0 5px #bda391; }
+        
         tr.cursor-pointer:hover { background-color: #efede4; }
         .detail-row { display: none; background-color: #fafaf9; }
-        .active-row { display: table-row; }
     </style>
 </head>
 <body class="p-4 md:p-8">
     <div class="max-w-7xl mx-auto">
         <header class="flex justify-between items-center mb-10 bg-white p-6 rounded-xl shadow-sm gold-border">
             <div>
-                <h1 class="text-2xl font-bold text-[#4a4a4a]">永旭全球 (Yongxu Global) </h1>
+                <h1 class="text-2xl font-bold text-[#4a4a4a]">永旭全球 (YongHsu Global) </h1>
                 <p id="update-time" class="text-slate-400 text-sm">數據載入中...</p>
             </div>
             <div class="text-right">
-                <span class="text-xs border border-[#bda391] text-[#bda391] px-2 py-1 rounded">家族辦公室專用</span>
+                <span class="text-xs border border-[#bda391] text-[#bda391] px-2 py-1 rounded">家族辦公室專用介面</span>
             </div>
         </header>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 text-center" id="kpi-container">
             </div>
 
-        <p class="text-sm text-slate-400 mb-4 px-2">💡 點擊下方客戶編號，即可展開詳細資產分佈分析。</p>
+        <p class="text-sm text-slate-400 mb-4 px-2">💡 點擊下方客戶編號，即可展開詳細資產分佈與莫蘭迪比例圖。</p>
 
         <div class="bg-white rounded-xl shadow-sm overflow-hidden">
             <table class="w-full text-left border-collapse">
                 <thead class="bg-[#e6e2d6] text-[#6b6b6b]">
                     <tr>
-                        <th class="p-4 font-bold">客戶編號 (點擊展開)</th>
+                        <th class="p-4 font-bold">客戶編號</th>
                         <th class="p-4 font-bold">總資產規模</th>
-                        <th class="p-4 font-bold">狀態</th>
+                        <th class="p-4 font-bold">目前狀態</th>
                         <th class="p-4 font-bold">對接專家</th>
                         <th class="p-4 font-bold">風險提醒</th>
                     </tr>
@@ -55,10 +64,8 @@
         // 【請在此處替換成你的 Google 試算表 CSV 網址】
         const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTV5NXcQxG8T3pFWlP-Dl6MUbSQT4Y5ILfsw3jMii0EmIKYdx73XkniDLss6_vVji5j8vcwhO3vYW05/pub?output=csv';
 
-        // 註冊 DataLabels 外掛
         Chart.register(ChartDataLabels);
 
-        // 莫蘭迪配色方案
         const morandiColors = [
             '#9fb8ad', '#c5d7c0', '#e6e2d6', '#e4dece', '#d9c8b0', 
             '#bda391', '#949a94', '#7a847a', '#847e72', '#a5a5a5'
@@ -86,13 +93,13 @@
                 if (row.狀態 === '綠燈') greenCount++;
 
                 const statusColorClass = row.狀態 === '紅燈' ? 'text-red-400' : (row.狀態 === '黃燈' ? 'text-yellow-500' : 'text-green-500');
+                const dotClass = row.狀態 === '紅燈' ? 'dot-red' : (row.狀態 === '黃燈' ? 'dot-yellow' : 'dot-green');
 
-                // 建立主列
                 tableBody.innerHTML += `
-                    <tr class="border-b cursor-pointer transition" onclick="toggleDetail(${index}, '${row.客戶編號}')">
+                    <tr class="border-b cursor-pointer transition" onclick="toggleDetail(${index})">
                         <td class="p-4 font-bold text-[#bda391]"><u>${row.客戶編號}</u></td>
-                        <td class="p-4">${row.資產規模}</td>
-                        <td class="p-4"><span class="${statusColorClass} font-bold">● ${row.狀態}</span></td>
+                        <td class="p-4 font-medium">${row.資產規模} 萬元</td>
+                        <td class="p-4"><span class="status-dot ${dotClass}"></span><span class="${statusColorClass} font-bold">${row.狀態}</span></td>
                         <td class="p-4">${row.對接專家}</td>
                         <td class="p-4 text-sm text-slate-400">${row.風險提醒}</td>
                     </tr>
@@ -100,7 +107,7 @@
                         <td colspan="5" class="p-8">
                             <div class="flex flex-col lg:flex-row gap-8 items-start">
                                 <div class="w-full lg:w-1/3">
-                                    <h4 class="font-bold mb-4 text-[#7a847a] border-b pb-2">資產明細表</h4>
+                                    <h4 class="font-bold mb-4 text-[#7a847a] border-b pb-2">資產明細 (單位: 萬元)</h4>
                                     <table class="w-full text-sm">
                                         ${renderAssetList(row)}
                                     </table>
@@ -114,49 +121,43 @@
                 `;
             });
 
-            // 更新頂部 KPI
             document.getElementById('kpi-container').innerHTML = `
-                <div class="bg-white p-6 rounded-xl shadow-sm border-b-4 border-[#9fb8ad]">健康綠燈：<span class="text-2xl font-bold text-[#9fb8ad]">${greenCount}</span></div>
-                <div class="bg-white p-6 rounded-xl shadow-sm border-b-4 border-[#e4dece]">關注黃燈：<span class="text-2xl font-bold text-[#d4c59a]">${yellowCount}</span></div>
-                <div class="bg-white p-6 rounded-xl shadow-sm border-b-4 border-[#bda391]">預警紅燈：<span class="text-2xl font-bold text-[#bda391]">${redCount}</span></div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border-b-4 border-[#9fb8ad]">
+                    <span class="status-dot dot-green"></span>健康綠燈：<span class="text-2xl font-bold text-[#9fb8ad]">${greenCount}</span> 戶
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border-b-4 border-[#e4dece]">
+                    <span class="status-dot dot-yellow"></span>關注黃燈：<span class="text-2xl font-bold text-[#d4c59a]">${yellowCount}</span> 戶
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border-b-4 border-[#bda391]">
+                    <span class="status-dot dot-red"></span>預警紅燈：<span class="text-2xl font-bold text-[#bda391]">${redCount}</span> 戶
+                </div>
             `;
             document.getElementById('update-time').innerText = '最後更新：' + new Date().toLocaleString();
-            
-            // 全域保存數據以便畫圖
             window.clientData = data;
         }
 
-        // 輔助函式：產生資產清單 HTML
         function renderAssetList(row) {
-            const labels = ['股票', '房地產', '房租', '保險', '共同基金', '債券', '黃金', '現金', '私募基金'];
+            const labels = ['股票', '房地產', '壽險', '共同基金', '債券', '黃金', '現金', '私募基金'];
             return labels.map(label => {
                 const val = row[label] || '0';
-                return `<tr class="border-b"><td class="py-2 text-slate-500">${label}</td><td class="py-2 text-right font-medium">${val}</td></tr>`;
+                return `<tr class="border-b"><td class="py-2 text-slate-500">${label}</td><td class="py-2 text-right font-medium">${val} 萬元</td></tr>`;
             }).join('');
         }
 
-        // 展開與收合功能
-        function toggleDetail(index, clientId) {
+        function toggleDetail(index) {
             const detailRow = document.getElementById(`detail-${index}`);
             const isVisible = detailRow.style.display === 'table-row';
-            
-            // 先關閉所有展開的列 (可選，若想一次只看一個客戶)
             document.querySelectorAll('.detail-row').forEach(row => row.style.display = 'none');
-
             if (!isVisible) {
                 detailRow.style.display = 'table-row';
                 renderChart(index, window.clientData[index]);
             }
         }
 
-        // 繪製圓餅圖
         function renderChart(index, row) {
-            const labels = ['股票', '房地產', '房租', '保險', '共同基金', '債券', '黃金', '現金', '私募基金'];
+            const labels = ['股票', '房地產', '壽險', '共同基金', '債券', '黃金', '現金', '私募基金'];
             const dataValues = labels.map(l => parseFloat(row[l]) || 0);
-            
             const ctx = document.getElementById(`chart-${index}`).getContext('2d');
-            
-            // 如果該 Canvas 已經有圖表則銷毀重畫
             if (window[`chartObj-${index}`]) window[`chartObj-${index}`].destroy();
 
             window[`chartObj-${index}`] = new Chart(ctx, {
@@ -173,22 +174,21 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    layout: { padding: 30 },
+                    layout: { padding: 40 },
                     plugins: {
-                        legend: { position: 'right', labels: { color: '#7a847a' } },
+                        legend: { position: 'right', labels: { color: '#7a847a', font: { size: 12 } } },
                         datalabels: {
                             color: '#5b5b5b',
                             font: { weight: 'bold', size: 12 },
                             formatter: (value, ctx) => {
                                 let sum = ctx.dataset.data.reduce((a, b) => a + b, 0);
-                                if (value === 0) return null; // 數值為 0 不顯示
+                                if (value === 0) return null;
                                 let percentage = (value * 100 / sum).toFixed(1) + "%";
                                 return ctx.chart.data.labels[ctx.dataIndex] + "\n" + percentage;
                             },
                             anchor: 'end',
                             align: 'start',
-                            offset: 10,
-                            // 拉線效果由外掛自動模擬或透過 anchor/align 達成
+                            offset: 15
                         }
                     }
                 }
