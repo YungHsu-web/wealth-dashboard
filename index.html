@@ -11,6 +11,8 @@
     <style>
         body { background-color: #f4f4f2; font-family: "Microsoft JhengHei", sans-serif; color: #5b5b5b; }
         .gold-border { border-top: 4px solid #bda391; }
+        
+        /* 飽和度燈號樣式 */
         .status-dot {
             display: inline-block;
             width: 12px;
@@ -18,44 +20,81 @@
             border-radius: 50%;
             margin-right: 8px;
         }
-        .dot-green { background-color: #9fb8ad; box-shadow: 0 0 5px #9fb8ad; }
-        .dot-yellow { background-color: #e4dece; box-shadow: 0 0 5px #d4c59a; }
-        .dot-red { background-color: #bda391; box-shadow: 0 0 5px #bda391; }
+        .dot-green { background-color: #22c55e; box-shadow: 0 0 8px #22c55e; } /* 飽和綠 */
+        .dot-yellow { background-color: #eab308; box-shadow: 0 0 8px #eab308; } /* 飽和黃 */
+        .dot-red { background-color: #ef4444; box-shadow: 0 0 8px #ef4444; }    /* 飽和紅 */
+        
+        .section-title {
+            background-color: #e6e2d6;
+            padding: 10px 20px;
+            font-weight: bold;
+            color: #4a4a4a;
+            border-radius: 8px 8px 0 0;
+            margin-top: 20px;
+        }
         
         tr.cursor-pointer:hover { background-color: #efede4; }
         .detail-row { display: none; background-color: #fafaf9; }
+        .hnw-tag {
+            background-color: #4a4a4a;
+            color: #d9c8b0;
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
     </style>
 </head>
 <body class="p-4 md:p-8">
     <div class="max-w-7xl mx-auto">
         <header class="flex justify-between items-center mb-10 bg-white p-6 rounded-xl shadow-sm gold-border">
             <div>
-                <h1 class="text-2xl font-bold text-[#4a4a4a]">永旭全球 (YongHsu Global) </h1>
+                <h1 class="text-2xl font-bold text-[#4a4a4a]">永旭全球 (Yongxu Global) </h1>
                 <p id="update-time" class="text-slate-400 text-sm">數據載入中...</p>
             </div>
             <div class="text-right">
-                <span class="text-xs border border-[#bda391] text-[#bda391] px-2 py-1 rounded">家族辦公室專用介面</span>
+                <span class="text-xs border border-[#bda391] text-[#bda391] px-2 py-1 rounded">家族辦公室管理系統</span>
             </div>
         </header>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 text-center" id="kpi-container">
-            </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 text-center" id="kpi-container"></div>
 
-        <p class="text-sm text-slate-400 mb-4 px-2">💡 點擊下方客戶編號，即可展開詳細資產分佈與莫蘭迪比例圖。</p>
-
-        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div class="section-title flex justify-between">
+            <span>📈 成長型客戶區域 (資產規模 3000 萬以下)</span>
+            <span id="growth-count" class="text-sm"></span>
+        </div>
+        <div class="bg-white rounded-b-xl shadow-sm overflow-hidden mb-10">
             <table class="w-full text-left border-collapse">
-                <thead class="bg-[#e6e2d6] text-[#6b6b6b]">
+                <thead class="bg-[#f2f0e9] text-[#6b6b6b] text-sm">
                     <tr>
-                        <th class="p-4 font-bold">客戶編號</th>
-                        <th class="p-4 font-bold">總資產規模</th>
-                        <th class="p-4 font-bold">目前狀態</th>
-                        <th class="p-4 font-bold">對接專家</th>
-                        <th class="p-4 font-bold">風險提醒</th>
+                        <th class="p-4 w-1/5">客戶編號</th>
+                        <th class="p-4 w-1/5">總資產規模</th>
+                        <th class="p-4 w-1/5">目前狀態</th>
+                        <th class="p-4 w-1/5">對接專家</th>
+                        <th class="p-4">風險提醒</th>
                     </tr>
                 </thead>
-                <tbody id="client-table-body">
-                    </tbody>
+                <tbody id="growth-table-body"></tbody>
+            </table>
+        </div>
+
+        <div class="section-title flex justify-between" style="background-color: #d9c8b0;">
+            <span>💎 高淨值客戶區域 (資產規模 3000 萬以上)</span>
+            <span id="hnw-count" class="text-sm"></span>
+        </div>
+        <div class="bg-white rounded-b-xl shadow-sm overflow-hidden mb-10 border-2 border-[#d9c8b0]">
+            <table class="w-full text-left border-collapse">
+                <thead class="bg-[#d9c8b0] text-[#4a4a4a] text-sm">
+                    <tr>
+                        <th class="p-4 w-1/5">客戶編號</th>
+                        <th class="p-4 w-1/5">總資產規模</th>
+                        <th class="p-4 w-1/5">目前狀態</th>
+                        <th class="p-4 w-1/5">對接專家</th>
+                        <th class="p-4">風險提醒</th>
+                    </tr>
+                </thead>
+                <tbody id="hnw-table-body"></tbody>
             </table>
         </div>
     </div>
@@ -66,10 +105,7 @@
 
         Chart.register(ChartDataLabels);
 
-        const morandiColors = [
-            '#9fb8ad', '#c5d7c0', '#e6e2d6', '#e4dece', '#d9c8b0', 
-            '#bda391', '#949a94', '#7a847a', '#847e72', '#a5a5a5'
-        ];
+        const morandiColors = ['#9fb8ad', '#c5d7c0', '#e6e2d6', '#e4dece', '#d9c8b0', '#bda391', '#949a94', '#7a847a', '#847e72', '#a5a5a5'];
 
         function loadData() {
             Papa.parse(sheetUrl, {
@@ -84,20 +120,30 @@
 
         function updateDashboard(data) {
             let redCount = 0, yellowCount = 0, greenCount = 0;
-            const tableBody = document.getElementById('client-table-body');
-            tableBody.innerHTML = '';
+            const growthTable = document.getElementById('growth-table-body');
+            const hnwTable = document.getElementById('hnw-table-body');
+            
+            growthTable.innerHTML = '';
+            hnwTable.innerHTML = '';
+
+            let hnwList = [];
+            let growthList = [];
 
             data.forEach((row, index) => {
+                // 燈號計數
                 if (row.狀態 === '紅燈') redCount++;
                 if (row.狀態 === '黃燈') yellowCount++;
                 if (row.狀態 === '綠燈') greenCount++;
 
-                const statusColorClass = row.狀態 === '紅燈' ? 'text-red-400' : (row.狀態 === '黃燈' ? 'text-yellow-500' : 'text-green-500');
+                // 判斷是否為高淨值 (大於 3000 萬)
+                const assetValue = parseFloat(row.資產規模.replace(/,/g, '')) || 0;
+                
+                const statusColorClass = row.狀態 === '紅燈' ? 'text-red-600' : (row.狀態 === '黃燈' ? 'text-yellow-600' : 'text-green-600');
                 const dotClass = row.狀態 === '紅燈' ? 'dot-red' : (row.狀態 === '黃燈' ? 'dot-yellow' : 'dot-green');
 
-                tableBody.innerHTML += `
+                const rowHtml = `
                     <tr class="border-b cursor-pointer transition" onclick="toggleDetail(${index})">
-                        <td class="p-4 font-bold text-[#bda391]"><u>${row.客戶編號}</u></td>
+                        <td class="p-4 font-bold text-[#bda391]"><u>${row.客戶編號}</u>${assetValue > 3000 ? '<span class="hnw-tag">HNW</span>' : ''}</td>
                         <td class="p-4 font-medium">${row.資產規模} 萬元</td>
                         <td class="p-4"><span class="status-dot ${dotClass}"></span><span class="${statusColorClass} font-bold">${row.狀態}</span></td>
                         <td class="p-4">${row.對接專家}</td>
@@ -108,9 +154,7 @@
                             <div class="flex flex-col lg:flex-row gap-8 items-start">
                                 <div class="w-full lg:w-1/3">
                                     <h4 class="font-bold mb-4 text-[#7a847a] border-b pb-2">資產明細 (單位: 萬元)</h4>
-                                    <table class="w-full text-sm">
-                                        ${renderAssetList(row)}
-                                    </table>
+                                    <table class="w-full text-sm">${renderAssetList(row)}</table>
                                 </div>
                                 <div class="w-full lg:w-2/3 h-80 bg-white rounded-lg p-4 shadow-inner">
                                     <canvas id="chart-${index}"></canvas>
@@ -119,17 +163,30 @@
                         </td>
                     </tr>
                 `;
+
+                if (assetValue > 3000) {
+                    hnwTable.innerHTML += rowHtml;
+                    hnwList.push(row);
+                } else {
+                    growthTable.innerHTML += rowHtml;
+                    growthList.push(row);
+                }
             });
 
+            // 更新數量顯示
+            document.getElementById('growth-count').innerText = `共 ${growthList.length} 戶`;
+            document.getElementById('hnw-count').innerText = `共 ${hnwList.length} 戶`;
+
+            // 更新 KPI
             document.getElementById('kpi-container').innerHTML = `
-                <div class="bg-white p-6 rounded-xl shadow-sm border-b-4 border-[#9fb8ad]">
-                    <span class="status-dot dot-green"></span>健康綠燈：<span class="text-2xl font-bold text-[#9fb8ad]">${greenCount}</span> 戶
+                <div class="bg-white p-6 rounded-xl shadow-sm border-b-4 border-green-500">
+                    <span class="status-dot dot-green"></span>健康綠燈：<span class="text-2xl font-bold text-green-600">${greenCount}</span> 戶
                 </div>
-                <div class="bg-white p-6 rounded-xl shadow-sm border-b-4 border-[#e4dece]">
-                    <span class="status-dot dot-yellow"></span>關注黃燈：<span class="text-2xl font-bold text-[#d4c59a]">${yellowCount}</span> 戶
+                <div class="bg-white p-6 rounded-xl shadow-sm border-b-4 border-yellow-500">
+                    <span class="status-dot dot-yellow"></span>關注黃燈：<span class="text-2xl font-bold text-yellow-600">${yellowCount}</span> 戶
                 </div>
-                <div class="bg-white p-6 rounded-xl shadow-sm border-b-4 border-[#bda391]">
-                    <span class="status-dot dot-red"></span>預警紅燈：<span class="text-2xl font-bold text-[#bda391]">${redCount}</span> 戶
+                <div class="bg-white p-6 rounded-xl shadow-sm border-b-4 border-red-500">
+                    <span class="status-dot dot-red"></span>預警紅燈：<span class="text-2xl font-bold text-red-600">${redCount}</span> 戶
                 </div>
             `;
             document.getElementById('update-time').innerText = '最後更新：' + new Date().toLocaleString();
