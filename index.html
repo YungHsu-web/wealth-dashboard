@@ -3,19 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>永旭全球 - 客戶資產健診系統</title>
+    <title>永旭全球 - 客戶資產負債管理系統</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
         body { background-color: #f4f4f2; font-family: "Microsoft JhengHei", sans-serif; color: #4a4a4a; }
         .gold-border { border-top: 4px solid #bda391; }
         .status-dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; }
         .dot-green { background-color: #22c55e; box-shadow: 0 0 8px #22c55e; } 
         .dot-yellow { background-color: #eab308; box-shadow: 0 0 8px #eab308; } 
+        /* 紅燈呼吸效果 */
         .dot-red { background-color: #ef4444; box-shadow: 0 0 10px #ef4444; animation: pulse 2s infinite; }
         @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.2); } 100% { opacity: 1; transform: scale(1); } }
-        .task-step { flex: 1; text-align: center; padding: 8px; border-bottom: 3px solid #e5e7eb; color: #9ca3af; font-size: 0.8rem; font-weight: bold; }
+        
+        .task-step { flex: 1; text-align: center; padding: 6px; border-bottom: 3px solid #e5e7eb; color: #9ca3af; font-size: 0.75rem; font-weight: bold; }
         .task-step.active { color: #bda391; border-bottom-color: #bda391; background: #fdfbf7; }
         .detail-row { display: none; background-color: #fafaf9; }
     </style>
@@ -24,63 +27,85 @@
     <div class="max-w-7xl mx-auto">
         <header class="flex justify-between items-center mb-8 bg-white p-6 rounded-xl shadow-sm gold-border">
             <div>
-                <h1 class="text-2xl font-bold text-slate-800">永旭全球 (YongHsu Global)</h1>
+                <h1 class="text-2xl font-bold">永旭全球 (YongHsu Global)</h1>
                 <p id="update-time" class="text-slate-500 text-sm mt-1">數據載入中...</p>
             </div>
-            <span class="hidden md:block text-xs border border-[#bda391] text-[#bda391] px-4 py-1 rounded-full font-bold">家族辦公室 ‧ 智能追蹤系統</span>
+            <div class="text-right">
+                <span class="text-xs border border-[#bda391] text-[#bda391] px-3 py-1 rounded-full font-bold">家族辦公室 ‧ 智能資產系統</span>
+            </div>
         </header>
 
-        <div id="kpi-container" class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8"></div>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 text-center" id="kpi-container"></div>
 
-        <div class="bg-white rounded-xl shadow-md overflow-hidden border border-slate-200">
-            <table class="w-full text-left">
-                <thead class="bg-slate-50 text-slate-500 text-sm">
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
+            <table class="w-full text-left border-collapse">
+                <thead class="bg-slate-50 text-sm">
                     <tr>
                         <th class="p-4">客戶編號/姓名</th>
-                        <th class="p-4">淨資產 (Net Worth)</th>
-                        <th class="p-4">負債比</th>
-                        <th class="p-4">健康燈號</th>
+                        <th class="p-4 text-center">淨資產 (Net Worth)</th>
+                        <th class="p-4 text-center">負債比</th>
+                        <th class="p-4 text-center">健康狀態</th>
                         <th class="p-4">對接專家</th>
                     </tr>
                 </thead>
-                <tbody id="main-table-body"></tbody>
+                <tbody id="table-body"></tbody>
             </table>
         </div>
     </div>
 
     <script>
-        function init() {
-            google.script.run.withSuccessHandler(renderData).getFullData();
+        // 1. 這是你的 CSV 網址
+        const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTV5NXcQxG8T3pFWlP-Dl6MUbSQT4Y5ILfsw3jMii0EmIKYdx73XkniDLss6_vVji5j8vcwhO3vYW05/pub?output=csv';
+
+        Chart.register(ChartDataLabels);
+        const assetColors = ['#9fb8ad', '#bda391', '#7a847a', '#d9c8b0'];
+
+        function parseNum(val) { return parseFloat((val || '').toString().replace(/,/g, '')) || 0; }
+
+        function loadData() {
+            Papa.parse(sheetUrl, {
+                download: true, header: true,
+                complete: function(results) {
+                    const cleanData = results.data.filter(row => row['客戶編號']);
+                    renderData(cleanData);
+                }
+            });
         }
 
         function renderData(data) {
-            const tbody = document.getElementById('main-table-body');
+            const tbody = document.getElementById('table-body');
             let totalAUM = 0, counts = { RED: 0, YELLOW: 0, GREEN: 0 };
             tbody.innerHTML = '';
 
             data.forEach((row, index) => {
-                const liq = parseFloat(row.cash) + parseFloat(row.deposits);
-                const inv = parseFloat(row.stock) + parseFloat(row.fund) + parseFloat(row.bond) + parseFloat(row.privateFund) + parseFloat(row.crypto);
-                const fix = parseFloat(row.realEstate) + parseFloat(row.gold) + parseFloat(row.art);
-                const ins = parseFloat(row.insurance);
+                const liq = parseNum(row['現金及活存']) + parseNum(row['定存']);
+                const inv = parseNum(row['股票']) + parseNum(row['共同基金']) + parseNum(row['債券']) + parseNum(row['私募基金']) + parseNum(row['虛擬資產']);
+                const fix = parseNum(row['房地產']) + parseNum(row['黃金']) + parseNum(row['藝術品']);
+                const ins = parseNum(row['壽險保單價值']);
                 const totalAssets = liq + inv + fix + ins;
-                const totalLiab = parseFloat(row.shortDebt) + parseFloat(row.longDebt);
+                const totalLiab = parseNum(row['短期負債']) + parseNum(row['長期負債']);
                 const netWorth = totalAssets - totalLiab;
                 const debtRatio = totalAssets > 0 ? ((totalLiab / totalAssets) * 100).toFixed(1) : 0;
                 
+                // 讀取 Health_Check 的資料 (S, T, U 欄)
+                const status = row['健康燈號'] || 'GREEN';
+                const currentQ = row['當前進度'] || 'Q1';
+                const task = row['追蹤任務'] || '無設定任務';
+
                 totalAUM += netWorth;
-                counts[row.status]++;
+                counts[status]++;
+                row._calc = { liq, inv, fix, ins, netWorth, debtRatio, task, currentQ };
 
-                const statusColor = row.status === 'RED' ? 'text-red-600' : (row.status === 'YELLOW' ? 'text-yellow-600' : 'text-green-600');
-                const dotClass = `dot-${row.status.toLowerCase()}`;
+                const dotClass = `dot-${status.toLowerCase()}`;
+                const statusLabel = status === 'RED' ? '預警' : (status === 'YELLOW' ? '關注' : '健康');
 
-                const rowHtml = `
-                    <tr class="border-b cursor-pointer hover:bg-slate-50 transition" onclick="toggleDetail(${index})">
-                        <td class="p-4 font-bold text-slate-700">${row.id} <span class="text-xs font-normal text-slate-400">(${row.name})</span></td>
-                        <td class="p-4 font-bold text-[#bda391]">${netWorth.toLocaleString()} 萬</td>
-                        <td class="p-4">${debtRatio}%</td>
-                        <td class="p-4"><span class="status-dot ${dotClass}"></span><span class="${statusColor} font-bold">${row.status}</span></td>
-                        <td class="p-4 text-sm font-bold text-slate-600">${row.expert}</td>
+                tbody.innerHTML += `
+                    <tr class="border-b cursor-pointer hover:bg-slate-50" onclick="toggleDetail(${index})">
+                        <td class="p-4 font-bold text-slate-700">${row['客戶編號']} <span class="text-xs font-normal text-slate-400">(${row['客戶姓名']})</span></td>
+                        <td class="p-4 text-center font-bold text-[#bda391]">${netWorth.toLocaleString()} 萬</td>
+                        <td class="p-4 text-center">${debtRatio}%</td>
+                        <td class="p-4 text-center"><span class="status-dot ${dotClass}"></span><span class="font-bold text-sm">${statusLabel}</span></td>
+                        <td class="p-4 text-sm font-bold text-slate-600">${row['對接專家']}</td>
                     </tr>
                     <tr id="detail-${index}" class="detail-row">
                         <td colspan="5" class="p-6 bg-slate-50 border-b-2 border-[#bda391]">
@@ -88,40 +113,37 @@
                                 <div class="bg-white p-5 rounded-lg shadow-sm">
                                     <h4 class="font-bold border-b pb-2 mb-4">🚩 年度追蹤任務</h4>
                                     <div class="flex mb-4">
-                                        <div class="task-step ${row.currentQ === 'Q1' ? 'active' : ''}">Q1 啟動</div>
-                                        <div class="task-step ${row.currentQ === 'Q2' ? 'active' : ''}">Q2 檢核</div>
-                                        <div class="task-step ${row.currentQ === 'Q3' ? 'active' : ''}">Q3 平衡</div>
-                                        <div class="task-step ${row.currentQ === 'Q4' ? 'active' : ''}">Q4 結算</div>
+                                        <div class="task-step ${currentQ === 'Q1' ? 'active' : ''}">Q1 啟動</div>
+                                        <div class="task-step ${currentQ === 'Q2' ? 'active' : ''}">Q2 檢核</div>
+                                        <div class="task-step ${currentQ === 'Q3' ? 'active' : ''}">Q3 平衡</div>
+                                        <div class="task-step ${currentQ === 'Q4' ? 'active' : ''}">Q4 結算</div>
                                     </div>
-                                    <div class="bg-slate-50 p-3 rounded text-sm text-slate-700">
-                                        <strong>當前任務：</strong> ${row.task}
+                                    <div class="bg-[#fdfbf7] p-3 rounded border border-[#e8decb] text-sm">
+                                        <strong>本季重點：</strong> ${task}
                                     </div>
                                 </div>
                                 <div class="bg-white p-5 rounded-lg shadow-sm">
-                                    <h4 class="font-bold border-b pb-2 mb-2">📊 四大資產配置</h4>
+                                    <h4 class="font-bold border-b pb-2 mb-2">📊 資產配置比例</h4>
                                     <canvas id="chart-${index}" height="150"></canvas>
                                 </div>
                             </div>
                         </td>
                     </tr>
                 `;
-                tbody.innerHTML += rowHtml;
-                row._calc = { liq, inv, fix, ins };
             });
 
-            // 更新 KPI
             updateKPI(totalAUM, counts);
-            window.clientData = data;
+            document.getElementById('update-time').innerText = '最後同步：' + new Date().toLocaleString();
+            window.allData = data;
         }
 
         function updateKPI(aum, c) {
             document.getElementById('kpi-container').innerHTML = `
-                <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-[#bda391]"><div class="text-xs font-bold text-slate-400">總管理淨資產 (AUM)</div><div class="text-2xl font-bold text-[#bda391]">${aum.toLocaleString()} 萬</div></div>
-                <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-green-500"><div class="text-xs font-bold text-slate-400">健康</div><div class="text-2xl font-bold text-green-600">${c.GREEN}</div></div>
-                <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-yellow-500"><div class="text-xs font-bold text-slate-400">關注</div><div class="text-2xl font-bold text-yellow-500">${c.YELLOW}</div></div>
-                <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-red-500"><div class="text-xs font-bold text-slate-400">預警</div><div class="text-2xl font-bold text-red-500">${c.RED}</div></div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-[#bda391]"><div class="text-xs font-bold text-slate-400">總管理淨資產 (AUM)</div><div class="text-2xl font-bold text-[#bda391]">${aum.toLocaleString()} 萬</div></div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-green-500"><div class="text-xs font-bold text-slate-400">健康</div><div class="text-2xl font-bold text-green-600">${c.GREEN}</div></div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-yellow-500"><div class="text-xs font-bold text-slate-400">關注</div><div class="text-2xl font-bold text-yellow-500">${c.YELLOW}</div></div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-red-500"><div class="text-xs font-bold text-slate-400">預警</div><div class="text-2xl font-bold text-red-500">${c.RED}</div></div>
             `;
-            document.getElementById('update-time').innerText = '最後同步：' + new Date().toLocaleString();
         }
 
         function toggleDetail(index) {
@@ -130,7 +152,7 @@
             document.querySelectorAll('.detail-row').forEach(r => r.style.display = 'none');
             if (!isVisible) {
                 el.style.display = 'table-row';
-                renderChart(index, window.clientData[index]._calc);
+                renderChart(index, window.allData[index]._calc);
             }
         }
 
@@ -140,13 +162,15 @@
                 type: 'doughnut',
                 data: {
                     labels: ['流動', '投資', '固定', '保障'],
-                    datasets: [{ data: [d.liq, d.inv, d.fix, d.ins], backgroundColor: ['#9fb8ad', '#bda391', '#7a847a', '#d9c8b0'] }]
+                    datasets: [{ data: [d.liq, d.inv, d.fix, d.ins], backgroundColor: assetColors }]
                 },
-                options: { plugins: { legend: { position: 'right' } } }
+                options: { 
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'right' }, datalabels: { display: false } } 
+                }
             });
         }
-
-        window.onload = init;
+        window.onload = loadData;
     </script>
 </body>
 </html>
