@@ -3,98 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>永旭全球 - 資產管理動態儀表板</title>
+    <title>永旭全球 - 客戶資產負債管理系統</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
-        body { background-color: #f4f4f2; font-family: "Microsoft JhengHei", sans-serif; color: #5b5b5b; }
+        body { background-color: #f4f4f2; font-family: "Microsoft JhengHei", sans-serif; color: #4a4a4a; }
         .gold-border { border-top: 4px solid #bda391; }
         
-        /* 飽和度燈號樣式 */
-        .status-dot {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            margin-right: 8px;
-        }
-        .dot-green { background-color: #22c55e; box-shadow: 0 0 8px #22c55e; } /* 飽和綠 */
-        .dot-yellow { background-color: #eab308; box-shadow: 0 0 8px #eab308; } /* 飽和黃 */
-        .dot-red { background-color: #ef4444; box-shadow: 0 0 8px #ef4444; }    /* 飽和紅 */
+        .status-dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; }
+        .dot-green { background-color: #22c55e; box-shadow: 0 0 8px #22c55e; } 
+        .dot-yellow { background-color: #eab308; box-shadow: 0 0 8px #eab308; } 
+        .dot-red { background-color: #ef4444; box-shadow: 0 0 8px #ef4444; }    
         
-        .section-title {
-            background-color: #e6e2d6;
-            padding: 10px 20px;
-            font-weight: bold;
-            color: #4a4a4a;
-            border-radius: 8px 8px 0 0;
-            margin-top: 20px;
-        }
+        .section-title { padding: 12px 20px; font-weight: bold; border-radius: 8px 8px 0 0; margin-top: 24px; }
+        .bg-hnw { background-color: #d9c8b0; color: #4a4a4a; }
+        .bg-growth { background-color: #e6e2d6; color: #4a4a4a; }
         
         tr.cursor-pointer:hover { background-color: #efede4; }
         .detail-row { display: none; background-color: #fafaf9; }
-        .hnw-tag {
-            background-color: #4a4a4a;
-            color: #d9c8b0;
-            font-size: 0.7rem;
-            padding: 2px 6px;
-            border-radius: 4px;
-            margin-left: 8px;
-            vertical-align: middle;
-        }
+        .hnw-tag { background-color: #4a4a4a; color: #d9c8b0; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; margin-left: 8px; vertical-align: middle; }
+        
+        /* 財務報表專用樣式 */
+        .fs-table th, .fs-table td { padding: 8px; border-bottom: 1px solid #e5e7eb; }
+        .fs-table th { color: #6b7280; font-weight: normal; text-align: left; }
+        .fs-total { font-weight: bold; color: #111827; background-color: #f3f4f6; }
+        .fs-net { font-weight: bold; color: #bda391; font-size: 1.1rem; border-top: 2px solid #bda391; }
     </style>
 </head>
 <body class="p-4 md:p-8">
     <div class="max-w-7xl mx-auto">
-        <header class="flex justify-between items-center mb-10 bg-white p-6 rounded-xl shadow-sm gold-border">
+        <header class="flex justify-between items-center mb-8 bg-white p-6 rounded-xl shadow-sm gold-border">
             <div>
-                <h1 class="text-2xl font-bold text-[#4a4a4a]">永旭全球 (Yongxu Global) </h1>
-                <p id="update-time" class="text-slate-400 text-sm">數據載入中...</p>
+                <h1 class="text-2xl font-bold">永旭全球 (Yongxu Global) </h1>
+                <p id="update-time" class="text-slate-500 text-sm mt-1">數據載入中...</p>
             </div>
             <div class="text-right">
-                <span class="text-xs border border-[#bda391] text-[#bda391] px-2 py-1 rounded">家族辦公室管理系統</span>
+                <span class="text-xs border border-[#bda391] text-[#bda391] px-3 py-1 rounded-full font-bold tracking-wider">家族辦公室 ‧ 資產健診系統</span>
             </div>
         </header>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 text-center" id="kpi-container"></div>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 text-center" id="kpi-container"></div>
 
-        <div class="section-title flex justify-between">
-            <span>📈 成長型客戶區域 (資產規模 3000 萬以下)</span>
-            <span id="growth-count" class="text-sm"></span>
-        </div>
-        <div class="bg-white rounded-b-xl shadow-sm overflow-hidden mb-10">
-            <table class="w-full text-left border-collapse">
-                <thead class="bg-[#f2f0e9] text-[#6b6b6b] text-sm">
-                    <tr>
-                        <th class="p-4 w-1/5">客戶編號</th>
-                        <th class="p-4 w-1/5">總資產規模</th>
-                        <th class="p-4 w-1/5">目前狀態</th>
-                        <th class="p-4 w-1/5">對接專家</th>
-                        <th class="p-4">風險提醒</th>
-                    </tr>
-                </thead>
-                <tbody id="growth-table-body"></tbody>
-            </table>
-        </div>
+        <p class="text-sm text-slate-500 mb-2 px-2"><span class="font-bold">操作提示：</span>點擊客戶編號，即可展開專屬的「個人資產負債表」與「四大資產配置圖」。</p>
 
-        <div class="section-title flex justify-between" style="background-color: #d9c8b0;">
-            <span>💎 高淨值客戶區域 (資產規模 3000 萬以上)</span>
-            <span id="hnw-count" class="text-sm"></span>
+        <div class="section-title bg-hnw flex justify-between items-center">
+            <span class="text-lg">💎 家族傳承與高淨值專區 (淨資產 3000 萬以上)</span>
+            <span id="hnw-count" class="text-sm font-bold bg-white px-3 py-1 rounded-full opacity-80"></span>
         </div>
-        <div class="bg-white rounded-b-xl shadow-sm overflow-hidden mb-10 border-2 border-[#d9c8b0]">
+        <div class="bg-white rounded-b-xl shadow-sm overflow-hidden mb-8 border-2 border-[#d9c8b0]">
             <table class="w-full text-left border-collapse">
-                <thead class="bg-[#d9c8b0] text-[#4a4a4a] text-sm">
+                <thead class="bg-[#e8decb] text-sm">
                     <tr>
-                        <th class="p-4 w-1/5">客戶編號</th>
-                        <th class="p-4 w-1/5">總資產規模</th>
-                        <th class="p-4 w-1/5">目前狀態</th>
-                        <th class="p-4 w-1/5">對接專家</th>
-                        <th class="p-4">風險提醒</th>
+                        <th class="p-4 w-1/6">客戶編號</th>
+                        <th class="p-4 w-1/6">總資產</th>
+                        <th class="p-4 w-1/6">淨資產 (Net Worth)</th>
+                        <th class="p-4 w-1/12">負債比</th>
+                        <th class="p-4 w-1/6">狀態</th>
+                        <th class="p-4">風險與專家</th>
                     </tr>
                 </thead>
                 <tbody id="hnw-table-body"></tbody>
+            </table>
+        </div>
+
+        <div class="section-title bg-growth flex justify-between items-center">
+            <span class="text-lg">📈 財富增長與陪跑專區 (淨資產 3000 萬以下)</span>
+            <span id="growth-count" class="text-sm font-bold bg-white px-3 py-1 rounded-full opacity-80"></span>
+        </div>
+        <div class="bg-white rounded-b-xl shadow-sm overflow-hidden mb-10 border border-[#e6e2d6]">
+            <table class="w-full text-left border-collapse">
+                <thead class="bg-[#f2f0e9] text-sm">
+                    <tr>
+                        <th class="p-4 w-1/6">客戶編號</th>
+                        <th class="p-4 w-1/6">總資產</th>
+                        <th class="p-4 w-1/6">淨資產 (Net Worth)</th>
+                        <th class="p-4 w-1/12">負債比</th>
+                        <th class="p-4 w-1/6">狀態</th>
+                        <th class="p-4">風險與專家</th>
+                    </tr>
+                </thead>
+                <tbody id="growth-table-body"></tbody>
             </table>
         </div>
     </div>
@@ -104,101 +94,139 @@
         const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTV5NXcQxG8T3pFWlP-Dl6MUbSQT4Y5ILfsw3jMii0EmIKYdx73XkniDLss6_vVji5j8vcwhO3vYW05/pub?output=csv';
 
         Chart.register(ChartDataLabels);
+        const assetColors = ['#9fb8ad', '#bda391', '#7a847a', '#d9c8b0']; // 流動, 投資, 固定, 保障
 
-        const morandiColors = ['#9fb8ad', '#c5d7c0', '#e6e2d6', '#e4dece', '#d9c8b0', '#bda391', '#949a94', '#7a847a', '#847e72', '#a5a5a5'];
+        function parseNum(val) {
+            return parseFloat((val || '').toString().replace(/,/g, '')) || 0;
+        }
 
         function loadData() {
             Papa.parse(sheetUrl, {
-                download: true,
-                header: true,
+                download: true, header: true,
                 complete: function(results) {
-                    const cleanData = results.data.filter(row => row.客戶編號);
-                    updateDashboard(cleanData);
+                    const cleanData = results.data.filter(row => row['客戶編號']);
+                    processAndRenderData(cleanData);
                 }
             });
         }
 
-        function updateDashboard(data) {
+        function processAndRenderData(data) {
             let redCount = 0, yellowCount = 0, greenCount = 0;
+            let totalAUM = 0; // 總管理淨資產
             const growthTable = document.getElementById('growth-table-body');
             const hnwTable = document.getElementById('hnw-table-body');
+            growthTable.innerHTML = ''; hnwTable.innerHTML = '';
             
-            growthTable.innerHTML = '';
-            hnwTable.innerHTML = '';
-
-            let hnwList = [];
-            let growthList = [];
+            let hnwCount = 0, growthCount = 0;
 
             data.forEach((row, index) => {
-                // 燈號計數
-                if (row.狀態 === '紅燈') redCount++;
-                if (row.狀態 === '黃燈') yellowCount++;
-                if (row.狀態 === '綠燈') greenCount++;
+                // 1. 計算四大資產
+                const liqAssets = parseNum(row['現金及活存']) + parseNum(row['定存']);
+                const invAssets = parseNum(row['股票']) + parseNum(row['共同基金']) + parseNum(row['債券']) + parseNum(row['私募基金']) + parseNum(row['虛擬資產']);
+                const fixAssets = parseNum(row['房地產']) + parseNum(row['黃金']) + parseNum(row['藝術品']);
+                const insAssets = parseNum(row['壽險保單價值']);
+                const totalAssets = liqAssets + invAssets + fixAssets + insAssets;
 
-                // 判斷是否為高淨值 (大於 3000 萬)
-                const assetValue = parseFloat(row.資產規模.replace(/,/g, '')) || 0;
+                // 2. 計算負債與淨值
+                const shortLiab = parseNum(row['短期負債']);
+                const longLiab = parseNum(row['長期負債']);
+                const totalLiab = shortLiab + longLiab;
+                const netWorth = totalAssets - totalLiab;
+                const debtRatio = totalAssets > 0 ? ((totalLiab / totalAssets) * 100).toFixed(1) : 0;
                 
-                const statusColorClass = row.狀態 === '紅燈' ? 'text-red-600' : (row.狀態 === '黃燈' ? 'text-yellow-600' : 'text-green-600');
-                const dotClass = row.狀態 === '紅燈' ? 'dot-red' : (row.狀態 === '黃燈' ? 'dot-yellow' : 'dot-green');
+                totalAUM += netWorth; // 累加至總管理淨額
 
+                // 保存計算結果供圖表使用
+                row._calc = { liqAssets, invAssets, fixAssets, insAssets, totalAssets, shortLiab, longLiab, totalLiab, netWorth, debtRatio };
+
+                // 3. 狀態統計
+                if (row['狀態'] === '紅燈') redCount++;
+                if (row['狀態'] === '黃燈') yellowCount++;
+                if (row['狀態'] === '綠燈') greenCount++;
+
+                const statusColor = row['狀態'] === '紅燈' ? 'text-red-600' : (row['狀態'] === '黃燈' ? 'text-yellow-600' : 'text-green-600');
+                const dotClass = row['狀態'] === '紅燈' ? 'dot-red' : (row['狀態'] === '黃燈' ? 'dot-yellow' : 'dot-green');
+                const debtColor = debtRatio > 50 ? 'text-red-500 font-bold' : (debtRatio > 30 ? 'text-yellow-600' : 'text-green-600');
+
+                // 4. 生成 HTML 結構
                 const rowHtml = `
                     <tr class="border-b cursor-pointer transition" onclick="toggleDetail(${index})">
-                        <td class="p-4 font-bold text-[#bda391]"><u>${row.客戶編號}</u>${assetValue > 3000 ? '<span class="hnw-tag">HNW</span>' : ''}</td>
-                        <td class="p-4 font-medium">${row.資產規模} 萬元</td>
-                        <td class="p-4"><span class="status-dot ${dotClass}"></span><span class="${statusColorClass} font-bold">${row.狀態}</span></td>
-                        <td class="p-4">${row.對接專家}</td>
-                        <td class="p-4 text-sm text-slate-400">${row.風險提醒}</td>
+                        <td class="p-4 font-bold text-[#847e72] text-lg"><u>${row['客戶編號']}</u>${netWorth > 3000 ? '<span class="hnw-tag">HNW</span>' : ''}</td>
+                        <td class="p-4 text-slate-500">${totalAssets.toLocaleString()} 萬</td>
+                        <td class="p-4 font-bold text-lg text-[#bda391]">${netWorth.toLocaleString()} 萬</td>
+                        <td class="p-4 ${debtColor}">${debtRatio}%</td>
+                        <td class="p-4"><span class="status-dot ${dotClass}"></span><span class="${statusColor} font-bold">${row['狀態']}</span></td>
+                        <td class="p-4 text-sm">
+                            <div class="text-slate-700 font-bold mb-1">專家: ${row['對接專家']}</div>
+                            <div class="text-slate-400">${row['風險提醒']}</div>
+                        </td>
                     </tr>
-                    <tr id="detail-${index}" class="detail-row border-b">
-                        <td colspan="5" class="p-8">
-                            <div class="flex flex-col lg:flex-row gap-8 items-start">
-                                <div class="w-full lg:w-1/3">
-                                    <h4 class="font-bold mb-4 text-[#7a847a] border-b pb-2">資產明細 (單位: 萬元)</h4>
-                                    <table class="w-full text-sm">${renderAssetList(row)}</table>
+                    <tr id="detail-${index}" class="detail-row">
+                        <td colspan="6" class="p-8 border-b-2 border-[#bda391]">
+                            <div class="flex flex-col lg:flex-row gap-8">
+                                <div class="w-full lg:w-1/2 bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+                                    <h4 class="font-bold text-xl mb-4 text-[#4a4a4a] border-b-2 border-slate-200 pb-2">📊 個人資產負債表 (TWD/萬元)</h4>
+                                    <table class="w-full text-sm fs-table mb-4">
+                                        <tr><th colspan="2" class="text-[#9fb8ad] font-bold">一、 資產盤點 (Assets)</th></tr>
+                                        <tr><td>流動性資產 (現金/活存/定存)</td><td class="text-right">${liqAssets.toLocaleString()}</td></tr>
+                                        <tr><td>投資性資產 (股/債/基/虛擬)</td><td class="text-right">${invAssets.toLocaleString()}</td></tr>
+                                        <tr><td>固定與另類資產 (房/金/藝術)</td><td class="text-right">${fixAssets.toLocaleString()}</td></tr>
+                                        <tr><td>保障性資產 (保單價值)</td><td class="text-right">${insAssets.toLocaleString()}</td></tr>
+                                        <tr class="fs-total"><td>總資產 (Total Assets)</td><td class="text-right">${totalAssets.toLocaleString()}</td></tr>
+                                    </table>
+                                    <table class="w-full text-sm fs-table">
+                                        <tr><th colspan="2" class="text-[#ef4444] font-bold">二、 負債盤點 (Liabilities)</th></tr>
+                                        <tr><td>短期負債 (信貸/卡費等)</td><td class="text-right">${shortLiab.toLocaleString()}</td></tr>
+                                        <tr><td>長期負債 (房貸/車貸等)</td><td class="text-right">${longLiab.toLocaleString()}</td></tr>
+                                        <tr class="fs-total"><td>總負債 (Total Liabilities)</td><td class="text-right text-red-500">${totalLiab.toLocaleString()}</td></tr>
+                                    </table>
+                                    <table class="w-full text-base fs-table mt-4">
+                                        <tr class="fs-net"><td class="py-3">淨資產 (Net Worth)</td><td class="text-right py-3">${netWorth.toLocaleString()}</td></tr>
+                                    </table>
                                 </div>
-                                <div class="w-full lg:w-2/3 h-80 bg-white rounded-lg p-4 shadow-inner">
-                                    <canvas id="chart-${index}"></canvas>
+                                <div class="w-full lg:w-1/2 bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex flex-col">
+                                    <h4 class="font-bold text-xl mb-4 text-[#4a4a4a] border-b-2 border-slate-200 pb-2">🎯 四大資產配置圖</h4>
+                                    <div class="flex-grow relative min-h-[250px]">
+                                        <canvas id="chart-${index}"></canvas>
+                                    </div>
+                                    <div class="mt-4 text-sm text-slate-500 bg-slate-50 p-3 rounded text-center">
+                                        健診評估：流動性資產與短期負債比為 ${shortLiab > 0 ? (liqAssets/shortLiab).toFixed(1) : '安全'} 倍。
+                                    </div>
                                 </div>
                             </div>
                         </td>
                     </tr>
                 `;
 
-                if (assetValue > 3000) {
-                    hnwTable.innerHTML += rowHtml;
-                    hnwList.push(row);
-                } else {
-                    growthTable.innerHTML += rowHtml;
-                    growthList.push(row);
-                }
+                // 5. 分級歸類 (依據淨資產)
+                if (netWorth >= 3000) { hnwTable.innerHTML += rowHtml; hnwCount++; } 
+                else { growthTable.innerHTML += rowHtml; growthCount++; }
             });
 
-            // 更新數量顯示
-            document.getElementById('growth-count').innerText = `共 ${growthList.length} 戶`;
-            document.getElementById('hnw-count').innerText = `共 ${hnwList.length} 戶`;
-
-            // 更新 KPI
+            // 統計與 KPI 渲染
+            document.getElementById('hnw-count').innerText = `${hnwCount} 戶`;
+            document.getElementById('growth-count').innerText = `${growthCount} 戶`;
+            
             document.getElementById('kpi-container').innerHTML = `
-                <div class="bg-white p-6 rounded-xl shadow-sm border-b-4 border-green-500">
-                    <span class="status-dot dot-green"></span>健康綠燈：<span class="text-2xl font-bold text-green-600">${greenCount}</span> 戶
+                <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-[#bda391]">
+                    <div class="text-slate-400 text-sm mb-1 font-bold">團隊總管理淨資產 (AUM)</div>
+                    <div class="text-3xl font-bold text-[#bda391]">${totalAUM.toLocaleString()} <span class="text-lg">萬</span></div>
                 </div>
-                <div class="bg-white p-6 rounded-xl shadow-sm border-b-4 border-yellow-500">
-                    <span class="status-dot dot-yellow"></span>關注黃燈：<span class="text-2xl font-bold text-yellow-600">${yellowCount}</span> 戶
+                <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-green-500">
+                    <div class="text-slate-400 text-sm mb-1 font-bold">健康 (配置優良)</div>
+                    <div class="text-3xl font-bold text-green-600"><span class="status-dot dot-green"></span>${greenCount}</div>
                 </div>
-                <div class="bg-white p-6 rounded-xl shadow-sm border-b-4 border-red-500">
-                    <span class="status-dot dot-red"></span>預警紅燈：<span class="text-2xl font-bold text-red-600">${redCount}</span> 戶
+                <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-yellow-500">
+                    <div class="text-slate-400 text-sm mb-1 font-bold">關注 (需稅務/配置調整)</div>
+                    <div class="text-3xl font-bold text-yellow-500"><span class="status-dot dot-yellow"></span>${yellowCount}</div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-red-500">
+                    <div class="text-slate-400 text-sm mb-1 font-bold">預警 (高負債/流動性風險)</div>
+                    <div class="text-3xl font-bold text-red-500"><span class="status-dot dot-red"></span>${redCount}</div>
                 </div>
             `;
-            document.getElementById('update-time').innerText = '最後更新：' + new Date().toLocaleString();
+            document.getElementById('update-time').innerText = '最後同步時間：' + new Date().toLocaleString();
             window.clientData = data;
-        }
-
-        function renderAssetList(row) {
-            const labels = ['股票', '房地產', '壽險', '共同基金', '債券', '黃金', '現金', '私募基金'];
-            return labels.map(label => {
-                const val = row[label] || '0';
-                return `<tr class="border-b"><td class="py-2 text-slate-500">${label}</td><td class="py-2 text-right font-medium">${val} 萬元</td></tr>`;
-            }).join('');
         }
 
         function toggleDetail(index) {
@@ -207,45 +235,41 @@
             document.querySelectorAll('.detail-row').forEach(row => row.style.display = 'none');
             if (!isVisible) {
                 detailRow.style.display = 'table-row';
-                renderChart(index, window.clientData[index]);
+                renderChart(index, window.clientData[index]._calc);
             }
         }
 
-        function renderChart(index, row) {
-            const labels = ['股票', '房地產', '壽險', '共同基金', '債券', '黃金', '現金', '私募基金'];
-            const dataValues = labels.map(l => parseFloat(row[l]) || 0);
+        function renderChart(index, calcData) {
+            const labels = ['流動性資產', '投資性資產', '固定與另類', '保障性資產'];
+            const dataValues = [calcData.liqAssets, calcData.invAssets, calcData.fixAssets, calcData.insAssets];
+            
             const ctx = document.getElementById(`chart-${index}`).getContext('2d');
             if (window[`chartObj-${index}`]) window[`chartObj-${index}`].destroy();
 
             window[`chartObj-${index}`] = new Chart(ctx, {
-                type: 'pie',
+                type: 'doughnut',
                 data: {
                     labels: labels,
                     datasets: [{
                         data: dataValues,
-                        backgroundColor: morandiColors,
-                        borderWidth: 2,
-                        borderColor: '#ffffff'
+                        backgroundColor: assetColors,
+                        borderWidth: 2, borderColor: '#ffffff',
+                        cutout: '40%'
                     }]
                 },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    layout: { padding: 40 },
+                    responsive: true, maintainAspectRatio: false,
+                    layout: { padding: 20 },
                     plugins: {
-                        legend: { position: 'right', labels: { color: '#7a847a', font: { size: 12 } } },
+                        legend: { position: 'right', labels: { color: '#4a4a4a', font: { size: 13, family: 'Microsoft JhengHei' } } },
                         datalabels: {
-                            color: '#5b5b5b',
-                            font: { weight: 'bold', size: 12 },
+                            color: '#ffffff', font: { weight: 'bold', size: 14 },
+                            textShadowColor: 'rgba(0,0,0,0.5)', textShadowBlur: 4,
                             formatter: (value, ctx) => {
                                 let sum = ctx.dataset.data.reduce((a, b) => a + b, 0);
-                                if (value === 0) return null;
-                                let percentage = (value * 100 / sum).toFixed(1) + "%";
-                                return ctx.chart.data.labels[ctx.dataIndex] + "\n" + percentage;
-                            },
-                            anchor: 'end',
-                            align: 'start',
-                            offset: 15
+                                if (value === 0 || sum === 0) return null;
+                                return Math.round(value * 100 / sum) + "%";
+                            }
                         }
                     }
                 }
