@@ -3,123 +3,95 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>永續全球管理顧問 - 客戶理財資產儀表板</title>
+    <title>永續全球 - 動態管理儀表板</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
         body { background-color: #f8fafc; font-family: "Microsoft JhengHei", sans-serif; }
-        .gold-border { border-top: 4px solid #b89150; } /* 企業金配色 */
+        .gold-border { border-top: 4px solid #b89150; }
     </style>
 </head>
 <body class="p-4 md:p-8">
-
     <div class="max-w-7xl mx-auto">
-        <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 bg-white p-6 rounded-xl shadow-md gold-border">
+        <header class="flex justify-between items-center mb-10 bg-white p-6 rounded-xl shadow-md gold-border">
             <div>
-                <h1 class="text-2xl font-bold text-slate-800">永續全球管理顧問 (Yongxu Global)</h1>
-                <p class="text-slate-500">財富傳承團隊 | 客戶資產監控報告 (2026-Q2)</p>
-            </div>
-            <div class="mt-4 md:mt-0 text-right">
-                <span class="bg-blue-100 text-blue-700 px-3 py-1 rounded text-sm font-medium">陪跑計畫執行中</span>
+                <h1 class="text-2xl font-bold text-slate-800">永續全球 (Yongxu Global) 動態管理</h1>
+                <p id="update-time" class="text-slate-500 text-sm">數據讀取中...</p>
             </div>
         </header>
 
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-slate-300">
-                <h3 class="text-slate-500 text-sm font-bold">追蹤資產總額</h3>
-                <p class="text-2xl font-bold text-slate-800 mt-2">NT$ 4.28 億</p>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 text-center" id="kpi-container">
             </div>
-            <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-green-500">
-                <h3 class="text-slate-500 text-sm font-bold">健康 (綠燈)</h3>
-                <p class="text-2xl font-bold text-green-600 mt-2">18 戶</p>
-                <p class="text-xs text-slate-400 mt-1">資產配置符合預期</p>
-            </div>
-            <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-yellow-400">
-                <h3 class="text-slate-500 text-sm font-bold">需調整 (黃燈)</h3>
-                <p class="text-2xl font-bold text-yellow-600 mt-2">5 戶</p>
-                <p class="text-xs text-slate-400 mt-1">稅務或比例偏移</p>
-            </div>
-            <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-red-500">
-                <h3 class="text-slate-500 text-sm font-bold">高風險 (紅燈)</h3>
-                <p class="text-2xl font-bold text-red-600 mt-2">2 戶</p>
-                <p class="text-xs text-slate-400 mt-1">法律風險或流失預警</p>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-            <div class="bg-white p-6 rounded-xl shadow-sm">
-                <h2 class="text-lg font-bold text-slate-800 mb-6">整體資產配置比例</h2>
-                <div class="h-64"><canvas id="assetTypeChart"></canvas></div>
-            </div>
-            <div class="bg-white p-6 rounded-xl shadow-sm">
-                <h2 class="text-lg font-bold text-slate-800 mb-6">本月諮詢服務達成率</h2>
-                <div class="h-64"><canvas id="serviceChart"></canvas></div>
-            </div>
-        </div>
 
         <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-            <div class="p-6 border-b border-slate-100 bg-slate-50">
-                <h2 class="text-lg font-bold text-slate-800">高價值客戶關注名單 (財富傳承團隊)</h2>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="text-slate-500 text-sm border-b">
-                            <th class="p-4 font-semibold">客戶識別碼</th>
-                            <th class="p-4 font-semibold">資產規模</th>
-                            <th class="p-4 font-semibold">配置狀態</th>
-                            <th class="p-4 font-semibold">風險提醒</th>
-                            <th class="p-4 font-semibold">對接專家</th>
-                        </tr>
-                    </thead>
-                    <tbody class="text-slate-700">
-                        <tr class="border-b hover:bg-slate-50 transition">
-                            <td class="p-4">YX-A001</td>
-                            <td class="p-4 font-medium">8,500 萬</td>
-                            <td class="p-4"><span class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs">🔴 紅燈</span></td>
-                            <td class="p-4 text-sm text-red-500">婚姻財產分配異動預警</td>
-                            <td class="p-4 text-sm text-slate-600">宗盈律師</td>
-                        </tr>
-                        <tr class="border-b hover:bg-slate-50 transition">
-                            <td class="p-4">YX-B023</td>
-                            <td class="p-4 font-medium">3,200 萬</td>
-                            <td class="p-4"><span class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded text-xs">🟡 黃燈</span></td>
-                            <td class="p-4 text-sm text-slate-600">保單受益人尚未更新</td>
-                            <td class="p-4 text-sm text-slate-600">保險規劃師</td>
-                        </tr>
+            <table class="w-full text-left border-collapse">
+                <thead class="bg-slate-50 border-b">
+                    <tr>
+                        <th class="p-4">客戶編號</th>
+                        <th class="p-4">資產規模</th>
+                        <th class="p-4">狀態</th>
+                        <th class="p-4">風險提醒</th>
+                        <th class="p-4">對接專家</th>
+                    </tr>
+                </thead>
+                <tbody id="client-table-body" class="text-slate-700">
                     </tbody>
-                </table>
-            </div>
+            </table>
         </div>
     </div>
 
     <script>
-        // 資產配置圓餅圖
-        new Chart(document.getElementById('assetTypeChart'), {
-            type: 'pie',
-            data: {
-                labels: ['房地產', '台美股', '保險規劃', '現金/債券'],
-                datasets: [{
-                    data: [45, 25, 20, 10],
-                    backgroundColor: ['#1e293b', '#b89150', '#3b82f6', '#94a3b8']
-                }]
-            },
-            options: { responsive: true, maintainAspectRatio: false }
-        });
+        // 【請在此處替換成你剛剛在 Google 試算表取得的 CSV 網址】
+        const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTV5NXcQxG8T3pFWlP-Dl6MUbSQT4Y5ILfsw3jMii0EmIKYdx73XkniDLss6_vVji5j8vcwhO3vYW05/pub?output=csv';
 
-        // 服務進度條
-        new Chart(document.getElementById('serviceChart'), {
-            type: 'bar',
-            data: {
-                labels: ['週週陪跑', '資產盤點', '稅務規劃', '遺囑法律'],
-                datasets: [{
-                    label: '已完成次數',
-                    data: [42, 38, 15, 8],
-                    backgroundColor: '#b89150'
-                }]
-            },
-            options: { responsive: true, maintainAspectRatio: false }
-        });
+        function loadData() {
+            Papa.parse(sheetUrl, {
+                download: true,
+                header: true,
+                complete: function(results) {
+                    const data = results.data;
+                    updateDashboard(data);
+                }
+            });
+        }
+
+        function updateDashboard(data) {
+            let redCount = 0, yellowCount = 0, greenCount = 0;
+            const tableBody = document.getElementById('client-table-body');
+            tableBody.innerHTML = '';
+
+            data.forEach(row => {
+                if(!row.客戶編號) return; // 跳過空行
+
+                // 計算狀態人數
+                if(row.狀態 === '紅燈') redCount++;
+                if(row.狀態 === '黃燈') yellowCount++;
+                if(row.狀態 === '綠燈') greenCount++;
+
+                // 產出表格列
+                const statusColor = row.狀態 === '紅燈' ? 'red' : (row.狀態 === '黃燈' ? 'yellow' : 'green');
+                tableBody.innerHTML += `
+                    <tr class="border-b hover:bg-slate-50">
+                        <td class="p-4">${row.客戶編號}</td>
+                        <td class="p-4">${row.資產規模}</td>
+                        <td class="p-4"><span class="bg-${statusColor}-100 text-${statusColor}-700 px-2 py-1 rounded text-xs">● ${row.狀態}</span></td>
+                        <td class="p-4 text-sm">${row.風險提醒}</td>
+                        <td class="p-4 text-sm">${row.對接專家}</td>
+                    </tr>
+                `;
+            });
+
+            // 更新 KPI
+            document.getElementById('kpi-container').innerHTML = `
+                <div class="bg-white p-6 rounded-xl shadow-sm border-b-4 border-green-500">綠燈：${greenCount}</div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border-b-4 border-yellow-500">黃燈：${yellowCount}</div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border-b-4 border-red-500">紅燈：${redCount}</div>
+            `;
+            document.getElementById('update-time').innerText = '最後更新時間：' + new Date().toLocaleString();
+        }
+
+        loadData(); // 啟動讀取
     </script>
 </body>
 </html>
