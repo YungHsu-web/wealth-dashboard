@@ -6,51 +6,78 @@
     <title>永旭全球 - CEO 資產監控儀表板</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
-        body { background-color: #f4f4f2; font-family: "Microsoft JhengHei", sans-serif; }
-        .gold-border { border-top: 4px solid #bda391; }
+        body { background-color: #f4f4f2; font-family: "Microsoft JhengHei", "PingFang TC", sans-serif; }
+        /* 全域字體放大 */
+        html { font-size: 18px; } 
+        .gold-border { border-top: 6px solid #bda391; }
         .detail-row { display: none; }
         .summary-btn { cursor: pointer; transition: all 0.2s; }
-        .summary-btn:hover { background-color: #fdfbf7; color: #bda391; }
-        .sub-item { display: none; background-color: #fafafa; padding: 4px 12px; font-size: 0.8rem; color: #666; border-left: 2px solid #eee; }
-        .status-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
-        .dot-RED { background-color: #ef4444; animation: pulse 2s infinite; }
-        .dot-YELLOW { background-color: #eab308; }
-        .dot-GREEN { background-color: #22c55e; }
+        .summary-btn:hover { background-color: #fdfbf7; }
+        .sub-item { display: none; background-color: #fafafa; padding: 6px 15px; color: #555; border-left: 3px solid #bda391; }
+        
+        /* 燈號僅顯示 Icon */
+        .status-dot { display: inline-block; width: 18px; height: 18px; border-radius: 50%; }
+        .dot-RED { background-color: #ef4444; box-shadow: 0 0 10px #ef4444; animation: pulse 2s infinite; }
+        .dot-YELLOW { background-color: #eab308; box-shadow: 0 0 8px #eab308; }
+        .dot-GREEN { background-color: #22c55e; box-shadow: 0 0 8px #22c55e; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+        .section-title { padding: 15px 25px; font-weight: bold; font-size: 1.2rem; }
+        .bg-hnw { background-color: #d9c8b0; color: #333; }
+        .bg-growth { background-color: #e6e2d6; color: #333; }
     </style>
 </head>
 <body class="p-4 md:p-8">
     <div class="max-w-7xl mx-auto">
-        <header class="flex justify-between items-center mb-6 bg-white p-6 rounded-xl shadow-sm gold-border">
+        <header class="flex justify-between items-center mb-8 bg-white p-6 rounded-xl shadow-sm gold-border">
             <div>
-                <h1 class="text-2xl font-bold text-slate-800">永旭全球 (YongHsu Global)</h1>
-                <p id="update-time" class="text-xs text-slate-400 mt-1">系統初始化中...</p>
+                <h1 class="text-3xl font-black text-slate-800">永旭全球 (YongHsu Global)</h1>
+                <p id="update-time" class="text-sm text-slate-400 mt-2">數據載入中...</p>
             </div>
-            <span class="text-xs border border-[#bda391] text-[#bda391] px-4 py-1 rounded-full font-bold">資產健診決策後台</span>
+            <span class="text-sm border-2 border-[#bda391] text-[#bda391] px-6 py-2 rounded-full font-black">資產健診決策後台</span>
         </header>
 
-        <div id="kpi-container" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6"></div>
+        <div id="kpi-container" class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8"></div>
 
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="section-title bg-hnw rounded-t-xl mt-8">💎 家族傳承專區 (淨資產 3000 萬以上)</div>
+        <div class="bg-white shadow-md overflow-hidden mb-10 border-2 border-[#d9c8b0]">
             <table class="w-full text-left">
-                <thead class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
+                <thead class="bg-[#e8decb] text-sm font-bold text-slate-700">
                     <tr>
-                        <th class="p-4">客戶編號</th>
-                        <th class="p-4 text-right">淨資產 (Net Worth)</th>
-                        <th class="p-4 text-center">負債比</th>
-                        <th class="p-4 text-center">健康狀態</th>
-                        <th class="p-4">對接專家</th>
+                        <th class="p-5">客戶編號</th>
+                        <th class="p-5 text-right">淨資產 (Net Worth)</th>
+                        <th class="p-5 text-center">負債比</th>
+                        <th class="p-5 text-center">狀態</th>
+                        <th class="p-5">對接專家</th>
                     </tr>
                 </thead>
-                <tbody id="client-table-body"></tbody>
+                <tbody id="hnw-table-body"></tbody>
+            </table>
+        </div>
+
+        <div class="section-title bg-growth rounded-t-xl">📈 財富陪跑專區 (淨資產 3000 萬以下)</div>
+        <div class="bg-white shadow-md overflow-hidden mb-10 border-2 border-[#e6e2d6]">
+            <table class="w-full text-left">
+                <thead class="bg-[#f2f0e9] text-sm font-bold text-slate-700">
+                    <tr>
+                        <th class="p-5">客戶編號</th>
+                        <th class="p-5 text-right">淨資產 (Net Worth)</th>
+                        <th class="p-5 text-center">負債比</th>
+                        <th class="p-5 text-center">狀態</th>
+                        <th class="p-5">對接專家</th>
+                    </tr>
+                </thead>
+                <tbody id="growth-table-body"></tbody>
             </table>
         </div>
     </div>
 
     <script>
         const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTV5NXcQxG8T3pFWlP-Dl6MUbSQT4Y5ILfsw3jMii0EmIKYdx73XkniDLss6_vVji5j8vcwhO3vYW05/pub?output=csv';
+        Chart.register(ChartDataLabels);
         
         function n(v) { return parseFloat((v || '0').toString().replace(/,/g, '')) || 0; }
 
@@ -65,9 +92,12 @@
         }
 
         function render(data) {
-            const tbody = document.getElementById('client-table-body');
+            const hnwBody = document.getElementById('hnw-table-body');
+            const growthBody = document.getElementById('growth-table-body');
             let totalAUM = 0, counts = { RED: 0, YELLOW: 0, GREEN: 0 };
-            tbody.innerHTML = '';
+            
+            hnwBody.innerHTML = ''; 
+            growthBody.innerHTML = '';
 
             data.forEach((row, i) => {
                 const liqItems = { '現金及活存': n(row['現金及活存']), '定存': n(row['定存']) };
@@ -89,48 +119,40 @@
 
                 totalAUM += netWorth;
                 counts[st]++;
-                row._cached = { liqItems, invItems, fixItems, insItems, liabItems, liqSum, invSum, fixSum, insSum, liabSum, totalAssets, netWorth, debtRatio, st, q: row['當前進度'], task: row['追蹤任務'] };
+                row._cached = { liqSum, invSum, fixSum, insSum, liabSum, totalAssets, netWorth, debtRatio, st, q: row['當前進度'], task: row['追蹤任務'], liqItems, invItems, fixItems, insItems, liabItems };
 
-                tbody.innerHTML += `
-                    <tr class="border-b hover:bg-slate-50 cursor-pointer" onclick="toggleDetail(${i})">
-                        <td class="p-4 font-bold text-slate-700">${row['客戶編號']}<br><span class="text-[10px] font-normal text-slate-400">${row['客戶姓名']}</span></td>
-                        <td class="p-4 text-right font-bold text-[#bda391]">${netWorth.toLocaleString()} 萬</td>
-                        <td class="p-4 text-center text-sm">${debtRatio}%</td>
-                        <td class="p-4 text-center"><span class="status-dot dot-${st}"></span><span class="text-xs font-bold">${st}</span></td>
-                        <td class="p-4 text-xs font-bold text-slate-600">${row['對接專家']}</td>
+                const html = `
+                    <tr class="border-b hover:bg-slate-50 cursor-pointer text-lg" onclick="toggleDetail(${i})">
+                        <td class="p-5 font-bold text-slate-800">${row['客戶編號']}<br><span class="text-sm font-normal text-slate-400">${row['客戶姓名']}</span></td>
+                        <td class="p-5 text-right font-black text-[#bda391]">${netWorth.toLocaleString()} 萬</td>
+                        <td class="p-5 text-center font-bold">${debtRatio}%</td>
+                        <td class="p-5 text-center"><span class="status-dot dot-${st}" title="${st}"></span></td>
+                        <td class="p-5 font-bold text-slate-600">${row['對接專家']}</td>
                     </tr>
                     <tr id="detail-${i}" class="detail-row">
-                        <td colspan="5" class="p-6 bg-[#fcfcfb] border-b-2 border-[#bda391]">
-                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                <div class="bg-white p-5 rounded-lg shadow-sm border border-slate-100">
-                                    <h4 class="font-bold text-slate-800 mb-4 pb-2 border-b flex justify-between">
-                                        <span>💎 資產總額盤點</span>
-                                        <span class="text-slate-400 font-normal">Total: ${totalAssets.toLocaleString()} 萬</span>
+                        <td colspan="5" class="p-8 bg-[#fcfcfb] border-b-4 border-[#bda391]">
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                                <div class="bg-white p-6 rounded-xl shadow-inner border border-slate-200">
+                                    <h4 class="text-xl font-black text-slate-800 mb-6 pb-4 border-b flex justify-between">
+                                        <span>💎 資產總額：${totalAssets.toLocaleString()} 萬</span>
                                     </h4>
-                                    
-                                    <div class="space-y-1">
-                                        ${renderFoldable('流動性資產', liqSum, liqItems, 'liq', i)}
-                                        ${renderFoldable('投資型資產', invSum, invItems, 'inv', i)}
-                                        ${renderFoldable('固定產/收藏', fixSum, fixItems, 'fix', i)}
-                                        ${renderFoldable('保險資產', insSum, insItems, 'ins', i)}
-                                        <div class="py-2"></div>
-                                        ${renderFoldable('總負債項目', liabSum, liabItems, 'liab', i, 'text-red-500')}
-                                        
-                                        <div class="flex justify-between items-center mt-4 pt-4 border-t-2 border-[#bda391]">
-                                            <span class="font-bold text-lg text-slate-700">淨資產 (Net Worth)</span>
-                                            <span class="font-black text-xl text-[#bda391]">${netWorth.toLocaleString()} 萬</span>
-                                        </div>
+                                    ${renderFoldable('流動性資產', liqSum, liqItems, 'liq', i)}
+                                    ${renderFoldable('投資型資產', invSum, invItems, 'inv', i)}
+                                    ${renderFoldable('固定產/收藏', fixSum, fixItems, 'fix', i)}
+                                    ${renderFoldable('保險資產', insSum, insItems, 'ins', i)}
+                                    <div class="my-4"></div>
+                                    ${renderFoldable('總負債項目', liabSum, liabItems, 'liab', i, 'text-red-500')}
+                                    <div class="flex justify-between items-center mt-6 pt-6 border-t-4 border-[#bda391]">
+                                        <span class="font-black text-2xl text-slate-800">淨資產 (Net Worth)</span>
+                                        <span class="font-black text-3xl text-[#bda391]">${netWorth.toLocaleString()} 萬</span>
                                     </div>
-
-                                    <div class="mt-6 pt-4 border-t border-dashed">
-                                        <p class="text-[10px] font-bold text-slate-400 mb-2">TRACKING STATUS</p>
-                                        <div class="text-sm font-bold text-slate-700 mb-2">${row._cached.q || 'Q1'} 任務：${row._cached.task || '未設定'}</div>
+                                    <div class="mt-8 pt-6 border-t border-dashed">
+                                        <div class="text-lg font-black text-slate-700">${row._cached.q || 'Q1'} 任務：${row._cached.task || '未設定'}</div>
                                     </div>
                                 </div>
-
-                                <div class="bg-white p-5 rounded-lg shadow-sm border border-slate-100 flex flex-col items-center">
-                                    <h4 class="font-bold text-slate-800 mb-4 w-full text-center">📊 資產權重圓餅圖</h4>
-                                    <div class="w-full h-[280px]">
+                                <div class="bg-white p-6 rounded-xl shadow-inner border border-slate-200 flex flex-col items-center">
+                                    <h4 class="text-xl font-black text-slate-800 mb-6">📊 資產權重分布</h4>
+                                    <div class="w-full h-[350px]">
                                         <canvas id="chart-${i}"></canvas>
                                     </div>
                                 </div>
@@ -138,26 +160,29 @@
                         </td>
                     </tr>
                 `;
+
+                if (netWorth >= 3000) hnwBody.innerHTML += html;
+                else growthBody.innerHTML += html;
             });
 
             updateKPI(totalAUM, counts);
-            document.getElementById('update-time').innerText = '最後同步：' + new Date().toLocaleString();
-            window.processedData = data;
+            document.getElementById('update-time').innerText = '最後更新：' + new Date().toLocaleString();
+            window.allData = data;
         }
 
-        function renderFoldable(label, sum, items, type, idx, colorClass = 'text-slate-600') {
-            let subItemsHtml = '';
-            for (let [key, val] of Object.entries(items)) {
-                if(val > 0) subItemsHtml += `<div class="flex justify-between text-[11px] py-1 border-b border-slate-50"><span>${key}</span><span>${val.toLocaleString()} 萬</span></div>`;
+        function renderFoldable(label, sum, items, type, idx, colorClass = 'text-slate-800') {
+            let sub = '';
+            for (let [k, v] of Object.entries(items)) {
+                if(v > 0) sub += `<div class="flex justify-between py-2 border-b border-slate-50"><span>${k}</span><span>${v.toLocaleString()} 萬</span></div>`;
             }
             return `
-                <div class="summary-btn group" onclick="toggleSub('${type}', ${idx})">
-                    <div class="flex justify-between items-center py-2 px-2 rounded hover:bg-slate-50">
-                        <span class="text-sm font-medium ${colorClass}">▶ ${label}</span>
-                        <span class="text-sm font-bold ${colorClass}">${sum.toLocaleString()} 萬</span>
+                <div class="summary-btn" onclick="toggleSub('${type}', ${idx})">
+                    <div class="flex justify-between items-center py-3 px-3 rounded hover:bg-slate-50">
+                        <span class="font-bold ${colorClass}">▶ ${label}</span>
+                        <span class="font-black ${colorClass}">${sum.toLocaleString()} 萬</span>
                     </div>
-                    <div id="sub-${type}-${idx}" class="sub-item ml-4 border-l-2 border-slate-100 pl-4 mb-2">
-                        ${subItemsHtml || '<div class="text-slate-300 italic">無具體明細</div>'}
+                    <div id="sub-${type}-${idx}" class="sub-item ml-6 font-bold">
+                        ${sub || '<div class="italic text-slate-300">無明細</div>'}
                     </div>
                 </div>
             `;
@@ -171,10 +196,10 @@
 
         function updateKPI(aum, c) {
             document.getElementById('kpi-container').innerHTML = `
-                <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-[#bda391]"><div class="text-[10px] font-bold text-slate-400 uppercase">團隊總管理淨資產</div><div class="text-xl font-black text-[#bda391]">${aum.toLocaleString()} 萬</div></div>
-                <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-green-500"><div class="text-[10px] font-bold text-slate-400 uppercase">健康配置</div><div class="text-xl font-black text-green-600">${c.GREEN}</div></div>
-                <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-yellow-500"><div class="text-[10px] font-bold text-slate-400 uppercase">需關注</div><div class="text-xl font-black text-yellow-500">${c.YELLOW}</div></div>
-                <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-red-500"><div class="text-[10px] font-bold text-slate-400 uppercase">風險預警</div><div class="text-xl font-black text-red-500">${c.RED}</div></div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border-l-8 border-[#bda391]"><div class="text-sm font-bold text-slate-400">總管理淨資產</div><div class="text-2xl font-black text-[#bda391]">${aum.toLocaleString()} 萬</div></div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border-l-8 border-green-500"><div class="text-sm font-bold text-slate-400">健康配置</div><div class="text-2xl font-black text-green-600">${c.GREEN}</div></div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border-l-8 border-yellow-500"><div class="text-sm font-bold text-slate-400">需關注</div><div class="text-2xl font-black text-yellow-500">${c.YELLOW}</div></div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border-l-8 border-red-500"><div class="text-sm font-bold text-slate-400">風險預警</div><div class="text-2xl font-black text-red-500">${c.RED}</div></div>
             `;
         }
 
@@ -184,19 +209,36 @@
             document.querySelectorAll('.detail-row').forEach(r => r.style.display = 'none');
             if (!isVisible) {
                 el.style.display = 'table-row';
-                const d = window.processedData[idx]._cached;
+                const d = window.allData[idx]._cached;
                 const ctx = document.getElementById(`chart-${idx}`).getContext('2d');
                 new Chart(ctx, {
                     type: 'doughnut',
                     data: {
                         labels: ['流動', '投資', '固定', '保障'],
-                        datasets: [{ data: [d.liqSum, d.invSum, d.fixSum, d.insSum], backgroundColor: ['#9fb8ad', '#bda391', '#7a847a', '#d9c8b0'], hoverOffset: 4 }]
+                        datasets: [{ 
+                            data: [d.liqSum, d.invSum, d.fixSum, d.insSum], 
+                            backgroundColor: ['#9fb8ad', '#bda391', '#7a847a', '#d9c8b0'] 
+                        }]
                     },
-                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } } }
+                    options: { 
+                        responsive: true, 
+                        maintainAspectRatio: false,
+                        plugins: { 
+                            legend: { display: true, position: 'bottom', labels: { font: { size: 14, weight: 'bold' } } },
+                            datalabels: {
+                                color: '#fff',
+                                font: { weight: 'bold', size: 16 },
+                                formatter: (value, ctx) => {
+                                    let sum = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                                    let percentage = (value * 100 / sum).toFixed(1) + "%";
+                                    return value > 0 ? percentage : '';
+                                }
+                            }
+                        } 
+                    }
                 });
             }
         }
-
         window.onload = loadData;
     </script>
 </body>
